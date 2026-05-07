@@ -1,9 +1,10 @@
 package zed.rainxch.core.domain.system
 
 interface SystemInstallSerializer {
-    suspend fun awaitFreeOrTimeout(timeoutMs: Long = DEFAULT_TIMEOUT_MS)
-
-    fun markPending(packageName: String)
+    suspend fun awaitFreeAndMarkPending(
+        packageName: String,
+        timeoutMs: Long = DEFAULT_TIMEOUT_MS,
+    )
 
     fun markCompleted(packageName: String)
 

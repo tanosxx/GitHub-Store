@@ -1107,8 +1107,7 @@ class AppsViewModel(
                     updateAppState(app.packageName, UpdateState.Installing)
 
                     try {
-                        systemInstallSerializer.awaitFreeOrTimeout()
-                        systemInstallSerializer.markPending(app.packageName)
+                        systemInstallSerializer.awaitFreeAndMarkPending(app.packageName)
                         installer.install(filePath, ext)
                     } catch (e: Exception) {
                         systemInstallSerializer.markCompleted(app.packageName)

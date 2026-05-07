@@ -216,8 +216,7 @@ class AutoUpdateWorker(
         val installerLabel = tweaksRepository.getInstallerType().first().name
         Logger.d { "AutoUpdateWorker: Installing ${app.appName} via $installerLabel" }
         try {
-            systemInstallSerializer.awaitFreeOrTimeout()
-            systemInstallSerializer.markPending(app.packageName)
+            systemInstallSerializer.awaitFreeAndMarkPending(app.packageName)
             installer.install(filePath, ext)
         } catch (e: Exception) {
             systemInstallSerializer.markCompleted(app.packageName)

@@ -312,11 +312,14 @@ class DefaultDownloadOrchestrator(
         val ext = spec.asset.name.substringAfterLast('.', "").lowercase()
         try {
             installer.ensurePermissionsOrThrow(ext)
-            systemInstallSerializer.awaitFreeOrTimeout()
-            systemInstallSerializer.markPending(spec.packageName)
+            systemInstallSerializer.awaitFreeAndMarkPending(spec.packageName)
             val outcome = installer.install(filePath, ext)
             when (outcome) {
                 InstallOutcome.COMPLETED -> {
+                    // Synchronous install (Shizuku / Dhizuku) — broadcast
+                    // arrives quickly, but release the gate now so the next
+                    // queued install isn't blocked by a possibly-late receiver.
+                    systemInstallSerializer.markCompleted(spec.packageName)
                     try {
                         installedAppsRepository.setPendingInstallFilePath(spec.packageName, null)
                     } catch (e: CancellationException) {
@@ -341,8 +344,10 @@ class DefaultDownloadOrchestrator(
                 }
             }
         } catch (e: CancellationException) {
+            systemInstallSerializer.markCompleted(spec.packageName)
             throw e
         } catch (t: Throwable) {
+            systemInstallSerializer.markCompleted(spec.packageName)
             Logger.e(t) { "Orchestrator: install failed for ${spec.packageName}" }
             markFailed(spec.packageName, t.message)
         }
@@ -551,10 +556,10 @@ class DefaultDownloadOrchestrator(
         updateEntry(packageName) { it.copy(stage = DownloadStage.Installing) }
         return try {
             installer.ensurePermissionsOrThrow(ext)
-            systemInstallSerializer.awaitFreeOrTimeout()
-            systemInstallSerializer.markPending(packageName)
+            systemInstallSerializer.awaitFreeAndMarkPending(packageName)
             val outcome = installer.install(filePath, ext)
             if (outcome == InstallOutcome.COMPLETED) {
+                systemInstallSerializer.markCompleted(packageName)
                 try {
                     installedAppsRepository.setPendingInstallFilePath(packageName, null)
                 } catch (e: CancellationException) {
@@ -570,8 +575,10 @@ class DefaultDownloadOrchestrator(
             // PackageEventReceiver handles the final state transition.
             outcome
         } catch (e: CancellationException) {
+            systemInstallSerializer.markCompleted(packageName)
             throw e
         } catch (t: Throwable) {
+            systemInstallSerializer.markCompleted(packageName)
             Logger.e(t) { "Orchestrator: standalone install failed for $packageName" }
             markFailed(packageName, t.message)
             null
