@@ -98,7 +98,14 @@ object VersionMath {
         val match = ADJACENT_ALPHA_PATTERN.find(s) ?: return s
         val letterStart = match.range.first + 1
         val tail = s.substring(letterStart).lowercase()
-        val isKnownMarker = KNOWN_PRE_RELEASE_PREFIXES.any { tail.startsWith(it) }
+        // `m\d+` covers the JetBrains-style milestone shorthand (`m5`,
+        // `m12`) which `PRE_RELEASE_MARKER_PATTERN` already matches but
+        // a string `startsWith` over [KNOWN_PRE_RELEASE_PREFIXES] does
+        // not — without the explicit regex check, `1.2.0m5` would slip
+        // past detection and silently rank as stable `1.2.0`.
+        val isKnownMarker =
+            KNOWN_PRE_RELEASE_PREFIXES.any { tail.startsWith(it) } ||
+                M_DIGIT_TAIL_PATTERN.containsMatchIn(tail)
         if (!isKnownMarker) return s
         return s.substring(0, letterStart) + "-" + s.substring(letterStart)
     }
@@ -150,14 +157,16 @@ object VersionMath {
     fun isSameVersion(a: String?, b: String?): Boolean = compareVersions(a, b) == 0
 
     /**
-     * Strict literal equality after the conservative cleanup that
-     * [normalizeVersion] applies BEFORE the semver normalization steps:
-     * trim, strip `refs/tags/`, strip leading `v` / `V`, trim again.
+     * Strict literal equality after the conservative cleanup pass that
+     * [stripCommonPrefixes] (delegating to [stripFullPrefix]) applies:
+     * trim, strip `refs/tags/`, strip a single case-insensitive
+     * word-style prefix with separator (`version-`, `release/`, `app_`,
+     * `build-`, `ver.`), strip a leading `v` / `V`, trim again.
      *
      * Differs from [isSameVersion] in that it does NOT strip `+build`
-     * metadata, does NOT extract a dotted-digit core from prefixed
-     * tags, and is case-sensitive on the suffix. Use this in UI
-     * branches that gate "Open" vs "Install" CTAs — semver treats
+     * metadata, does NOT extract a dotted-digit core from arbitrarily
+     * prefixed tags, and is case-sensitive on the suffix. Use this in
+     * UI branches that gate "Open" vs "Install" CTAs — semver treats
      * `1.0.0+build.1` and `1.0.0+build.2` as equivalent for ordering,
      * but users (and maintainers who abuse build metadata to ship
      * distinct artifacts under the same numeric core) consider them
@@ -298,6 +307,16 @@ object VersionMath {
     private val ADJACENT_ALPHA_PATTERN = Regex("""\d[A-Za-z]""")
 
     /**
+     * JetBrains-style milestone shorthand match used in
+     * [insertHyphenBeforeKnownMarker]. Matches `m1`, `m12`, `M5`,
+     * etc. at the start of a tail like `m5-arm64`. Kept separate
+     * from [KNOWN_PRE_RELEASE_PREFIXES] because that list is
+     * `startsWith`-friendly literal prefixes; this one needs a
+     * regex.
+     */
+    private val M_DIGIT_TAIL_PATTERN = Regex("""^m\d+""", RegexOption.IGNORE_CASE)
+
+    /**
      * 8-digit date integer like `20260502`. Year constrained to
      * 1900-2199 to keep this from swallowing arbitrary 8-digit
      * integers that maintainers might use as monotonic build numbers
@@ -377,49 +396,6 @@ object VersionMath {
      *   `v1.2.3`, `1.2.3-stable`, `v1.2.3-android`, `release-1.2.3`,
      *   `v2.0-final`, `v1.0.0-test-3`
      */
-    /**
-     * Coarse classification of the versioning scheme a tag string
-     * appears to follow. Useful for UI surfaces that want to render
-     * a date-stamped release differently from a semver one ("Released
-     * 2024-10-15" vs "Version 1.2.3"), or warn when a maintainer
-     * appears to have switched schemes mid-history (which silently
-     * breaks ordering — `1.2.0` would always read as older than
-     * `20260502` under numeric semver compare even if it was tagged
-     * later).
-     *
-     * The classification is intentionally rough; the underlying
-     * comparator does NOT branch on it. Callers can combine
-     * [detectScheme] outputs from two tags to detect cross-scheme
-     * comparisons that warrant a UI hint.
-     */
-    fun detectScheme(version: String?): Scheme {
-        if (version.isNullOrBlank()) return Scheme.Unknown
-        val cleaned = stripFullPrefix(version).substringBefore('+')
-        if (cleaned.isEmpty()) return Scheme.Unknown
-        // Hyphenated calver — yyyy-mm-dd, optionally with a trailing
-        // identifier we don't care about for the classification.
-        if (CALVER_HYPHEN_PATTERN.matchEntire(cleaned) != null) return Scheme.CalVer
-        // Single 8-digit run looks like yyyymmdd, e.g. `20260502`.
-        DATE_INTEGER_PATTERN.matchEntire(cleaned)?.let { return Scheme.CalVer }
-        // Dotted calver — yyyy.mm.dd inside a semver-shaped string.
-        DOTTED_CALVER_PATTERN.matchEntire(cleaned)?.let { return Scheme.CalVer }
-        // Anything that parses as semver after our normalisation pass
-        // is semver, including adjacent-letter pre-release variants.
-        val separated = insertHyphenBeforeKnownMarker(cleaned)
-        if (parseSemanticVersion(separated) != null) return Scheme.SemVer
-        // Hex-ish commit pointers (`v1.2.0+abc1234` strips the build
-        // metadata, but a bare commit hash falls here).
-        if (COMMIT_HASH_PATTERN.matchEntire(cleaned) != null) return Scheme.CommitHash
-        return Scheme.Unknown
-    }
-
-    enum class Scheme {
-        SemVer,
-        CalVer,
-        CommitHash,
-        Unknown,
-    }
-
     fun isPreReleaseTag(tag: String?): Boolean {
         if (tag.isNullOrBlank()) return false
         // Pre-process so the regex's `\b` boundary catches markers that
@@ -493,4 +469,47 @@ object VersionMath {
             "\\b(alpha|beta|rc|preview|prerelease|snapshot|canary|nightly|milestone|ea|dev|pre|m\\d+)\\d*\\b",
             RegexOption.IGNORE_CASE,
         )
+
+    /**
+     * Coarse classification of the versioning scheme a tag string
+     * appears to follow. Useful for UI surfaces that want to render
+     * a date-stamped release differently from a semver one ("Released
+     * 2024-10-15" vs "Version 1.2.3"), or warn when a maintainer
+     * appears to have switched schemes mid-history (which silently
+     * breaks ordering — `1.2.0` would always read as older than
+     * `20260502` under numeric semver compare even if it was tagged
+     * later).
+     *
+     * The classification is intentionally rough; the underlying
+     * comparator does NOT branch on it. Callers can combine
+     * [detectScheme] outputs from two tags to detect cross-scheme
+     * comparisons that warrant a UI hint.
+     */
+    fun detectScheme(version: String?): Scheme {
+        if (version.isNullOrBlank()) return Scheme.Unknown
+        val cleaned = stripFullPrefix(version).substringBefore('+')
+        if (cleaned.isEmpty()) return Scheme.Unknown
+        // Hyphenated calver — yyyy-mm-dd, optionally with a trailing
+        // identifier we don't care about for the classification.
+        if (CALVER_HYPHEN_PATTERN.matchEntire(cleaned) != null) return Scheme.CalVer
+        // Single 8-digit run looks like yyyymmdd, e.g. `20260502`.
+        DATE_INTEGER_PATTERN.matchEntire(cleaned)?.let { return Scheme.CalVer }
+        // Dotted calver — yyyy.mm.dd inside a semver-shaped string.
+        DOTTED_CALVER_PATTERN.matchEntire(cleaned)?.let { return Scheme.CalVer }
+        // Anything that parses as semver after our normalisation pass
+        // is semver, including adjacent-letter pre-release variants.
+        val separated = insertHyphenBeforeKnownMarker(cleaned)
+        if (parseSemanticVersion(separated) != null) return Scheme.SemVer
+        // Hex-ish commit pointers (`v1.2.0+abc1234` strips the build
+        // metadata, but a bare commit hash falls here).
+        if (COMMIT_HASH_PATTERN.matchEntire(cleaned) != null) return Scheme.CommitHash
+        return Scheme.Unknown
+    }
+
+    enum class Scheme {
+        SemVer,
+        CalVer,
+        CommitHash,
+        Unknown,
+    }
 }
