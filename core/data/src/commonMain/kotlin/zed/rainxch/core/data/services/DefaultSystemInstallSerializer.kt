@@ -13,6 +13,13 @@ class DefaultSystemInstallSerializer : SystemInstallSerializer {
         packageName: String,
         timeoutMs: Long,
     ) {
+        val initiallyHeldBy = pending.value
+        if (initiallyHeldBy != null) {
+            Logger.i {
+                "SystemInstallSerializer: $packageName waiting for $initiallyHeldBy to clear " +
+                    "(timeout ${timeoutMs}ms)"
+            }
+        }
         val acquired =
             withTimeoutOrNull(timeoutMs) {
                 while (!pending.compareAndSet(null, packageName)) {
@@ -25,6 +32,10 @@ class DefaultSystemInstallSerializer : SystemInstallSerializer {
                 "SystemInstallSerializer: timed out waiting for ${pending.value} to clear; force-claiming for $packageName"
             }
             pending.value = packageName
+        } else if (initiallyHeldBy != null) {
+            Logger.i {
+                "SystemInstallSerializer: $packageName acquired gate after waiting for $initiallyHeldBy"
+            }
         }
     }
 
