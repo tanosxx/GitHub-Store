@@ -915,16 +915,19 @@ fun AppItemCard(
                     apkFilePath = app.pendingInstallFilePath,
                 )
 
-                Column(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     Text(
                         text = app.appName,
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         CoilImage(
                             imageModel = { app.repoOwnerAvatarUrl },
@@ -946,6 +949,9 @@ fun AppItemCard(
                             text = app.repoOwner,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
                         )
                     }
 
@@ -998,6 +1004,8 @@ fun AppItemCard(
                                     ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
                             )
                             // Show the pinned variant tag inline so users can
                             // see at a glance which APK they'll get when they
@@ -1011,6 +1019,8 @@ fun AppItemCard(
                                         ),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
                         }
@@ -1026,6 +1036,8 @@ fun AppItemCard(
                                     ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                     }
