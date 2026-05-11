@@ -62,6 +62,28 @@ class TweaksViewModel(
 ) : ViewModel() {
     private companion object {
         private const val BATTERY_OPT_PREF_READ_TIMEOUT_MS: Long = 1_000
+
+        // IPv4 dotted-quad, each octet 0..255.
+        private val IPV4_PATTERN =
+            Regex(
+                "^(25[0-5]|2[0-4]\\d|[01]?\\d?\\d)" +
+                    "(\\.(25[0-5]|2[0-4]\\d|[01]?\\d?\\d)){3}$",
+            )
+
+        // IPv6 literal — character-level only (hex groups + colons,
+        // optional `::` shortcut). Permissive on canonical form because
+        // proxy clients normalize it; we only need to reject "looks
+        // wrong" inputs like `not a url`.
+        private val IPV6_PATTERN = Regex("^[0-9A-Fa-f:]+$")
+
+        // RFC 1123 hostname: labels of 1..63 alphanumeric / hyphen,
+        // must start and end with alphanumeric, separated by dots.
+        // Total length capped at 253 by the caller.
+        private val HOSTNAME_PATTERN =
+            Regex(
+                "^(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)" +
+                    "(?:\\.(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?))*$",
+            )
     }
 
     private var hasLoadedInitialData = false
@@ -611,14 +633,16 @@ class TweaksViewModel(
                                         return
                                     }
                             val host =
-                                form.host.trim().takeIf { it.isNotBlank() }
+                                form.host.trim().takeIf { isValidProxyHost(it) }
                                     ?: run {
+                                        val msg =
+                                            if (form.host.isBlank()) {
+                                                getString(Res.string.proxy_host_required)
+                                            } else {
+                                                getString(Res.string.proxy_host_invalid)
+                                            }
                                         viewModelScope.launch {
-                                            _events.send(
-                                                TweaksEvent.OnProxySaveError(
-                                                    getString(Res.string.proxy_host_required),
-                                                ),
-                                            )
+                                            _events.send(TweaksEvent.OnProxySaveError(msg))
                                         }
                                         return
                                     }
@@ -995,14 +1019,16 @@ class TweaksViewModel(
                             return null
                         }
                 val host =
-                    form.host.trim().takeIf { it.isNotBlank() }
+                    form.host.trim().takeIf { isValidProxyHost(it) }
                         ?: run {
+                            val msg =
+                                if (form.host.isBlank()) {
+                                    getString(Res.string.proxy_host_required)
+                                } else {
+                                    getString(Res.string.proxy_host_invalid)
+                                }
                             viewModelScope.launch {
-                                _events.send(
-                                    TweaksEvent.OnProxyTestError(
-                                        getString(Res.string.proxy_host_required),
-                                    ),
-                                )
+                                _events.send(TweaksEvent.OnProxyTestError(msg))
                             }
                             return null
                         }
@@ -1015,6 +1041,35 @@ class TweaksViewModel(
                 }
             }
         }
+    }
+
+    /**
+     * Light-but-real proxy host validator. Accepts:
+     *  - IPv4 dotted-quad (`192.168.1.1`) with octet range 0..255
+     *  - IPv6 literal, with or without surrounding brackets (`::1`,
+     *    `[2001:db8::1]`) — character-level only, doesn't validate
+     *    canonical form
+     *  - RFC 1123 hostname — labels of 1..63 alphanumeric / hyphen
+     *    characters separated by dots, must start/end with alphanumeric
+     *
+     * Rejects: garbage strings (`not a url`), schemes (`http://...`),
+     * paths (`example.com/api`), spaces, control characters. Mirrors the
+     * port validator's "reject and show clear error" contract.
+     */
+    private fun isValidProxyHost(raw: String): Boolean {
+        val host = raw.trim()
+        if (host.isBlank()) return false
+        if (host.length > 253) return false
+        if (host.any { it.isWhitespace() }) return false
+        if (host.contains("://") || host.contains("/") ||
+            host.contains("?") || host.contains("#")
+        ) {
+            return false
+        }
+        if (IPV4_PATTERN.matches(host)) return true
+        val ipv6Candidate = host.trim('[', ']')
+        if (ipv6Candidate.contains(":") && IPV6_PATTERN.matches(ipv6Candidate)) return true
+        return HOSTNAME_PATTERN.matches(host)
     }
 
     private suspend fun ProxyTestOutcome.toEvent(): TweaksEvent =

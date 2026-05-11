@@ -40,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -242,12 +243,19 @@ private fun ProxyDetailsFields(
     form: ProxyScopeFormState,
     onAction: (TweaksAction) -> Unit,
 ) {
+    val focusManager = LocalFocusManager.current
     val portValue = form.port
     val isPortInvalid =
         portValue.isNotEmpty() &&
             (portValue.toIntOrNull()?.let { it !in 1..65535 } ?: true)
+    val hostValue = form.host
+    // Real-time host validation mirrors the port pattern: only flag as
+    // invalid once the user has typed something, so the empty initial
+    // state doesn't shout an error at them.
+    val isHostInvalid = hostValue.isNotEmpty() && !isLikelyValidProxyHost(hostValue)
     val isFormValid =
-        form.host.isNotBlank() &&
+        hostValue.isNotEmpty() &&
+            !isHostInvalid &&
             portValue.isNotEmpty() &&
             portValue.toIntOrNull()?.let { it in 1..65535 } == true
 
@@ -265,6 +273,13 @@ private fun ProxyDetailsFields(
                 label = { Text(stringResource(Res.string.proxy_host)) },
                 placeholder = { Text("127.0.0.1") },
                 singleLine = true,
+                isError = isHostInvalid,
+                supportingText =
+                    if (isHostInvalid) {
+                        { Text(stringResource(Res.string.proxy_host_invalid)) }
+                    } else {
+                        null
+                    },
                 modifier = Modifier.weight(2f),
                 shape = RoundedCornerShape(12.dp),
             )
@@ -342,11 +357,22 @@ private fun ProxyDetailsFields(
             ProxyTestButton(
                 isInProgress = form.isTestInProgress,
                 enabled = isFormValid && !form.isTestInProgress,
-                onClick = { onAction(TweaksAction.OnProxyTest(scope)) },
+                onClick = {
+                    focusManager.clearFocus()
+                    onAction(TweaksAction.OnProxyTest(scope))
+                },
             )
 
             FilledTonalButton(
-                onClick = { onAction(TweaksAction.OnProxySave(scope)) },
+                // `clearFocus()` first so the IME commits any pending
+                // keystroke before the save runs — without this the
+                // user sometimes has to tap Save twice on Android,
+                // because the first tap goes to focus dismissal and the
+                // second one actually fires the click.
+                onClick = {
+                    focusManager.clearFocus()
+                    onAction(TweaksAction.OnProxySave(scope))
+                },
                 enabled = isFormValid && !form.isTestInProgress,
             ) {
                 Icon(
@@ -392,3 +418,40 @@ private fun ProxyTestButton(
         }
     }
 }
+
+/**
+ * UI-side mirror of `TweaksViewModel.isValidProxyHost`. Drives the
+ * real-time `isError` highlight on the host TextField so the user
+ * sees a problem before they tap Save — same UX as the port field.
+ * Authoritative validation still happens server-side in the VM; this
+ * is the optimistic, free-of-cost preview.
+ */
+private fun isLikelyValidProxyHost(raw: String): Boolean {
+    val host = raw.trim()
+    if (host.isBlank()) return false
+    if (host.length > 253) return false
+    if (host.any { it.isWhitespace() }) return false
+    if (host.contains("://") || host.contains("/") ||
+        host.contains("?") || host.contains("#")
+    ) {
+        return false
+    }
+    if (IPV4_PATTERN.matches(host)) return true
+    val ipv6Candidate = host.trim('[', ']')
+    if (ipv6Candidate.contains(":") && IPV6_PATTERN.matches(ipv6Candidate)) return true
+    return HOSTNAME_PATTERN.matches(host)
+}
+
+private val IPV4_PATTERN =
+    Regex(
+        "^(25[0-5]|2[0-4]\\d|[01]?\\d?\\d)" +
+            "(\\.(25[0-5]|2[0-4]\\d|[01]?\\d?\\d)){3}$",
+    )
+
+private val IPV6_PATTERN = Regex("^[0-9A-Fa-f:]+$")
+
+private val HOSTNAME_PATTERN =
+    Regex(
+        "^(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)" +
+            "(?:\\.(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?))*$",
+    )
