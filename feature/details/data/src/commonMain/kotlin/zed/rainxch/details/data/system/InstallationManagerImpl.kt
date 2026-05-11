@@ -104,10 +104,15 @@ class InstallationManagerImpl(
                     installedVersion = params.releaseTag,
                     installedAssetName = params.assetName,
                     installedAssetUrl = params.assetUrl,
-                    latestVersion = params.releaseTag,
-                    latestAssetName = params.assetName,
-                    latestAssetUrl = params.assetUrl,
-                    latestAssetSize = params.assetSize,
+                    // Leave upstream `latest*` blank on first-install. The
+                    // user may have picked an older release; pre-stamping
+                    // these to the picked tag's metadata would poison the
+                    // `checkForUpdates` versionCode-parity canary (#542).
+                    // The next periodic check resolves them from the feed.
+                    latestVersion = null,
+                    latestAssetName = null,
+                    latestAssetUrl = null,
+                    latestAssetSize = null,
                     appName = apkInfo.appName,
                     installSource = InstallSource.THIS_APP,
                     installedAt = System.now().toEpochMilliseconds(),
@@ -121,8 +126,8 @@ class InstallationManagerImpl(
                     isPendingInstall = params.isPendingInstall,
                     installedVersionName = apkInfo.versionName,
                     installedVersionCode = apkInfo.versionCode,
-                    latestVersionName = apkInfo.versionName,
-                    latestVersionCode = apkInfo.versionCode,
+                    latestVersionName = null,
+                    latestVersionCode = null,
                     signingFingerprint = apkInfo.signingFingerprint,
                     preferredAssetVariant = fingerprint?.variant,
                     preferredAssetTokens = serializedTokens,
