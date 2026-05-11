@@ -73,7 +73,12 @@ class SearchViewModel(
     private val exploreLog = logger.withTag("SearchExplore")
 
     companion object {
-        private const val MIN_QUERY_LENGTH = 3
+        // 2 covers common CJK app names that are exactly two characters
+        // (`B站`, `微博`, `抖音`, `美团`, …) which the previous 3-char floor
+        // silently rejected even when the user explicitly tapped the IME
+        // search action (#372). Single-character queries are still gated
+        // because they'd return millions of GitHub results.
+        private const val MIN_QUERY_LENGTH = 2
     }
 
     private val _state = MutableStateFlow(SearchState())
