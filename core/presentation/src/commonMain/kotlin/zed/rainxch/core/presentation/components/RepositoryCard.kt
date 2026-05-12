@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material.icons.outlined.Code
@@ -28,6 +29,8 @@ import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,6 +42,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -60,6 +66,7 @@ import zed.rainxch.core.presentation.utils.hasWeekNotPassed
 import zed.rainxch.core.presentation.utils.toIcons
 import zed.rainxch.githubstore.core.presentation.res.Res
 import zed.rainxch.githubstore.core.presentation.res.forked_repository
+import zed.rainxch.githubstore.core.presentation.res.hide_repository
 import zed.rainxch.githubstore.core.presentation.res.home_view_details
 import zed.rainxch.githubstore.core.presentation.res.installed
 import zed.rainxch.githubstore.core.presentation.res.open_in_browser
@@ -76,6 +83,7 @@ fun RepositoryCard(
     onShareClick: () -> Unit,
     onDeveloperClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onHideClick: (() -> Unit)? = null,
 ) {
     val uriHandler = LocalUriHandler.current
 
@@ -85,8 +93,11 @@ fun RepositoryCard(
         label = "seen_content_alpha",
     )
 
+    var hideMenuExpanded by remember { mutableStateOf(false) }
+
     ExpressiveCard(
         onClick = onClick,
+        onLongClick = onHideClick?.let { { hideMenuExpanded = true } },
         modifier = modifier,
     ) {
         Box(modifier = Modifier.alpha(contentAlpha)) {
@@ -334,6 +345,27 @@ fun RepositoryCard(
                             contentDescription = stringResource(Res.string.open_in_browser),
                         )
                     }
+                }
+            }
+
+            if (onHideClick != null) {
+                DropdownMenu(
+                    expanded = hideMenuExpanded,
+                    onDismissRequest = { hideMenuExpanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.hide_repository)) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.VisibilityOff,
+                                contentDescription = null,
+                            )
+                        },
+                        onClick = {
+                            hideMenuExpanded = false
+                            onHideClick()
+                        },
+                    )
                 }
             }
         }
