@@ -21,6 +21,8 @@ env:
 jobs:
   build-windows:
     runs-on: windows-latest
+    outputs:
+      windows-artifact-id: ${{ steps.upload-windows.outputs.artifact-id }}
 
     steps:
       - name: Checkout code
@@ -62,6 +64,7 @@ jobs:
         shell: bash
 
       - name: Upload Windows installers
+        id: upload-windows
         uses: actions/upload-artifact@v4
         with:
           name: windows-installers
@@ -71,6 +74,36 @@ jobs:
           if-no-files-found: error
           retention-days: 30
           compression-level: 6
+
+  sign-windows:
+    name: Sign Windows installers (SignPath)
+    needs: build-windows
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Submit signing request
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: '1ecf111e-323c-4703-bc9d-f0fb683bb4dc'
+          project-slug: 'GitHub-Store'
+          signing-policy-slug: 'test-signing'
+          artifact-configuration-slug: 'initial-version'
+          github-artifact-id: ${{ needs.build-windows.outputs.windows-artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed-artifacts
+
+      - name: Upload signed Windows installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installers-signed
+          path: signed-artifacts/*
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
 
   build-macos:
     strategy:
@@ -417,7 +450,7 @@ jobs:
 
   release:
     name: Draft release with all installers
-    needs: [build-windows, build-macos, build-linux]
+    needs: [sign-windows, build-macos, build-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -482,11 +515,13 @@ jobs:
           linux_appimage_count=0
           linux_arch_count=0
 
-          # Windows — names already unique (.exe, .msi)
+          # Windows — names already unique (.exe, .msi). Files come from the
+          # signed artifact, not the raw build output, so they carry the
+          # SignPath Authenticode signature.
           while IFS= read -r f; do
             [ -n "$f" ] || continue
             stage "$f" "$(basename "$f")" && windows_count=$((windows_count + 1)) || true
-          done < <(find artifacts/windows-installers -type f \( -name '*.exe' -o -name '*.msi' \) 2>/dev/null)
+          done < <(find artifacts/windows-installers-signed -type f \( -name '*.exe' -o -name '*.msi' \) 2>/dev/null)
 
           # macOS — disambiguate x64 vs arm64 (Compose outputs identical filenames per arch)
           while IFS= read -r f; do
