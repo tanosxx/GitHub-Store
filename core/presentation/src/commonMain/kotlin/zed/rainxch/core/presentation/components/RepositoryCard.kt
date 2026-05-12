@@ -100,6 +100,11 @@ fun RepositoryCard(
         onLongClick = onHideClick?.let { { hideMenuExpanded = true } },
         modifier = modifier,
     ) {
+        // Outer Box (no alpha) hosts both the dimmed visual content and the
+        // DropdownMenu. Putting the menu inside the alpha Box made the
+        // popup inherit `contentAlpha = 0.55f` whenever the repo was
+        // already seen, dimming the menu surface.
+        Box {
         Box(modifier = Modifier.alpha(contentAlpha)) {
             if (discoveryRepositoryUi.isFavourite) {
                 Icon(
@@ -347,27 +352,28 @@ fun RepositoryCard(
                     }
                 }
             }
+        }
 
-            if (onHideClick != null) {
-                DropdownMenu(
-                    expanded = hideMenuExpanded,
-                    onDismissRequest = { hideMenuExpanded = false },
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(Res.string.hide_repository)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.VisibilityOff,
-                                contentDescription = null,
-                            )
-                        },
-                        onClick = {
-                            hideMenuExpanded = false
-                            onHideClick()
-                        },
-                    )
-                }
+        if (onHideClick != null) {
+            DropdownMenu(
+                expanded = hideMenuExpanded,
+                onDismissRequest = { hideMenuExpanded = false },
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(Res.string.hide_repository)) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.VisibilityOff,
+                            contentDescription = null,
+                        )
+                    },
+                    onClick = {
+                        hideMenuExpanded = false
+                        onHideClick()
+                    },
+                )
             }
+        }
         }
     }
 }

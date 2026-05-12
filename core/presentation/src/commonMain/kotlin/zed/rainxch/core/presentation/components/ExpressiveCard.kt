@@ -19,6 +19,12 @@ fun ExpressiveCard(
     onLongClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
+    // Long-press without tap leaves the gesture orphaned: the card looks
+    // tappable but only responds to a hold. Fail loud so the API contract
+    // is obvious at the call site.
+    check(onLongClick == null || onClick != null) {
+        "ExpressiveCard: onLongClick requires onClick"
+    }
     when {
         onClick != null && onLongClick != null -> {
             // ElevatedCard's built-in `onClick` doesn't expose long-press;

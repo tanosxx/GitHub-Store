@@ -397,12 +397,22 @@ private fun MainState(
     onAction: (HomeAction) -> Unit,
 ) {
     val bottomNavHeight = LocalBottomNavigationHeight.current
-    val visibleRepos by remember(state.repos, state.isHideSeenEnabled, state.seenRepoIds) {
+    val visibleRepos by remember(
+        state.repos,
+        state.isHideSeenEnabled,
+        state.seenRepoIds,
+        state.hiddenRepoIds,
+    ) {
         derivedStateOf {
-            if (state.isHideSeenEnabled && state.seenRepoIds.isNotEmpty()) {
-                state.repos.filter { it.repository.id !in state.seenRepoIds }
-            } else {
+            val hidden = state.hiddenRepoIds
+            val needsHideSeen = state.isHideSeenEnabled && state.seenRepoIds.isNotEmpty()
+            if (hidden.isEmpty() && !needsHideSeen) {
                 state.repos
+            } else {
+                state.repos.filter { repo ->
+                    repo.repository.id !in hidden &&
+                        (!needsHideSeen || repo.repository.id !in state.seenRepoIds)
+                }
             }
         }
     }

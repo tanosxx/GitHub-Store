@@ -158,17 +158,11 @@ class SearchViewModel(
     private fun observeHiddenRepos() {
         viewModelScope.launch {
             hiddenReposRepository.getAllHiddenRepoIds().collect { ids ->
-                _state.update { current ->
-                    current.copy(
-                        hiddenRepoIds = ids,
-                        // Drop already-loaded repos that are now hidden so
-                        // the grid reacts immediately to a hide action.
-                        repositories =
-                            current.repositories
-                                .filter { it.repository.id !in ids }
-                                .toImmutableList(),
-                    )
-                }
+                // Track IDs only — `computeVisibleRepos` already filters
+                // hidden at render time. Removing from `repositories`
+                // would break `OnUndoHideRepository`: once the entity is
+                // gone there's nothing to bring back without re-fetching.
+                _state.update { it.copy(hiddenRepoIds = ids) }
             }
         }
     }

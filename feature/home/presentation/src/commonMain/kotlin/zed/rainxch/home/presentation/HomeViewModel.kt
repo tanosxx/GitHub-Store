@@ -377,10 +377,9 @@ class HomeViewModel(
                 .associateBy { it.repoId }
 
         val seenIds = _state.value.seenRepoIds
-        val hiddenIds = _state.value.hiddenRepoIds
         val currentLogin = currentUserLogin
 
-        return repos.filter { it.id !in hiddenIds }.map { repo ->
+        return repos.map { repo ->
             val apps = installedAppsMap[repo.id].orEmpty()
             val favourite = favoritesMap[repo.id]
             val starred = starredReposMap[repo.id]
@@ -607,18 +606,11 @@ class HomeViewModel(
     private fun observeHiddenRepos() {
         viewModelScope.launch {
             hiddenReposRepository.getAllHiddenRepoIds().collect { ids ->
-                _state.update { current ->
-                    current.copy(
-                        hiddenRepoIds = ids,
-                        // Drop already-loaded repos that are now hidden so
-                        // the grid reacts immediately to a hide action
-                        // without waiting for the next pagination tick.
-                        repos =
-                            current.repos
-                                .filter { it.repository.id !in ids }
-                                .toImmutableList(),
-                    )
-                }
+                // Track IDs only — mirror the `seenRepoIds` pattern so
+                // unhiding restores the repo to the visible list without
+                // a refresh. `HomeRoot.visibleRepos` filters at render
+                // time using these IDs.
+                _state.update { it.copy(hiddenRepoIds = ids) }
             }
         }
     }
