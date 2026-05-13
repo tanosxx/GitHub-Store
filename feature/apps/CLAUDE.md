@@ -1,30 +1,21 @@
-# CLAUDE.md - Apps Feature
+# Apps Feature
 
-## Purpose
+Installed-apps manager. Lists apps installed through GHS, launches them, checks updates. Android-only in nav (bottom-nav hidden on Desktop).
 
-Manages installed applications. Lists all apps installed through GitHub Store, allows launching them, and checks for available updates. Primarily relevant on **Android** (apps section is hidden on Desktop).
-
-## Module Structure
+## Structure
 
 ```
 feature/apps/
-├── domain/
-│   └── repository/AppsRepository.kt   # Installed apps, launch, update check
-├── data/
-│   ├── di/SharedModule.kt            # Koin: appsModule
-│   └── repository/AppsRepositoryImpl.kt  # Implementation using core InstalledAppsRepository
+├── domain/repository/AppsRepository.kt
+├── data/  AppsRepositoryImpl + di
 └── presentation/
-    ├── AppsViewModel.kt               # State management for installed apps list
-    ├── AppsState.kt                   # apps list, loading, error, search query, sort rule
-    ├── AppsAction.kt                  # Refresh, OpenApp, CheckUpdates, OnSortRuleSelected, OnSearchChange, OnLifecycleResume, OnIgnoreUpdate, OnSkipRelease, etc.
-    ├── AppsEvent.kt                   # One-off events
-    ├── AppsRoot.kt                    # Main composable (sectioned list with sort dropdown + search bar)
-    ├── components/                    # App item cards, update badges, LinkAppBottomSheet, AdvancedAppSettingsBottomSheet, ApkInspectSheet, import banner
-    ├── import/                        # External-import wizard (ExternalImportRoot/ViewModel) — Obtainium import/export + manual link import
-    └── starred/                       # Add-from-starred picker (StarredPickerRoot/ViewModel) — APK-shipping subset of user's GitHub stars
+    ├── AppsViewModel / State / Action / Event / Root
+    ├── components/  app item cards, update badges, LinkAppBottomSheet, AdvancedAppSettingsBottomSheet, ApkInspectSheet, import banner
+    ├── import/      # ExternalImportRoot/ViewModel — Obtainium import/export + manual-link
+    └── starred/     # StarredPickerRoot/ViewModel — APK-shipping subset of user's GitHub stars
 ```
 
-## Key Interfaces
+## Key interface
 
 ```kotlin
 interface AppsRepository {
@@ -36,17 +27,13 @@ interface AppsRepository {
 
 ## Navigation
 
-Route: `GithubStoreGraph.AppsScreen` (data object, no params)
+`GithubStoreGraph.AppsScreen`, `ExternalImportScreen`, `StarredPickerScreen`.
 
-## Implementation Notes
+## Notes
 
-- Uses `InstalledAppsRepository` and `SyncInstalledAppsUseCase` from core/domain
-- `openApp()` uses `AppLauncher` from core/domain to launch the installed app
-- `getLatestRelease()` checks if a newer version is available
-- Platform-specific: `PackageMonitor` and `Installer` handle Android package management
-- The apps section in the home screen bottom nav is only visible on `Platform.ANDROID`
-- **Sort + search:** `AppSortRule` enum (UpdatesFirst default, AlphabeticalAZ, RecentlyAdded, RecentlyUpdated). Persisted in DataStore. Inline search bar filters by appName / packageName client-side
-- **Per-app actions:** Ignore-updates (silences badge for the app), Skip-this-release (per-tag skip with auto-clear on next release), Advanced filter (regex on asset names + monorepo fallback), Pin variant (token-set + glob fingerprint), Inspect APK (decoded manifest sheet — package, signing, permissions, components)
-- **Auto-update on resume:** `AppsAction.OnLifecycleResume` fires `autoCheckForUpdatesIfNeeded` (30-min cooldown) — catches drift when an external install landed while GHS was background-killed
-- **External import wizard (`import/`):** Obtainium JSON import/export with pre-import summary (imported / already-tracked / non-GitHub-skipped buckets); manual-link-only add path; survey-signal "import from URL"
-- **Starred picker (`starred/`):** scans the signed-in user's GitHub stars, surfaces APK-shipping repos with sort/filter, opens Details on tap. Resumes mid-scan if GitHub rate-limits
+- Uses `InstalledAppsRepository` + `SyncInstalledAppsUseCase`. `openApp` via `AppLauncher`. `PackageMonitor` + `Installer` (Android).
+- Sort + search: `AppSortRule` enum (UpdatesFirst default, AlphabeticalAZ, RecentlyAdded, RecentlyUpdated). Persisted in DataStore. Inline search filters appName / packageName.
+- Per-app actions: Ignore-updates (silence badge), Skip-this-release (per-tag, auto-clear on next release), Advanced filter (regex on asset names + monorepo fallback), Pin variant (token-set + glob fingerprint), Inspect APK (decoded manifest sheet).
+- Auto-update on resume: `OnLifecycleResume` fires `autoCheckForUpdatesIfNeeded` (30-min cooldown) — catches drift after external install while GHS background-killed.
+- External import (`import/`): Obtainium JSON import/export with pre-import summary buckets (imported / already-tracked / non-GitHub-skipped); manual-link-only path.
+- Starred picker (`starred/`): scans signed-in user's GitHub stars, surfaces APK-shipping repos. Resumes mid-scan on rate-limit.
