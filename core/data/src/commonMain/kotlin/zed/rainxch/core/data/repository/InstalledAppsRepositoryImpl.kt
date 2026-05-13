@@ -243,6 +243,7 @@ class InstalledAppsRepositoryImpl(
         pickedIndex: Int?,
         pickedSiblingCount: Int?,
         trackedPackageName: String,
+        installedAssetName: String?,
     ): ResolvedRelease? {
         if (releases.isEmpty()) return null
 
@@ -307,8 +308,36 @@ class InstalledAppsRepositoryImpl(
             // tracked `.fdroid` package keeps fdroid-named assets.
             // Pinned variants are unaffected — fingerprintMatch /
             // positionMatch run against the full installable set above.
+            // Stem filter (issue #591): when the tracked app has a known
+            // prior asset name, restrict the auto-pick pool to release
+            // assets that share its base-name stem. Stops sibling apps
+            // shipped from the same repo (`AppA-1.10.apk` vs
+            // `AppB-2.20.apk`) from cross-pollinating: without this,
+            // `choosePrimaryAsset` would pick the highest numeric
+            // version regardless of the filename prefix.
+            val installedStem =
+                installedAssetName
+                    ?.let { AssetVariant.extractBaseStem(it) }
+                    ?.takeIf { it.isNotEmpty() }
             val autoPickPool =
-                AssetVariant.filterByPackageFlavor(installableForApp, trackedPackageName)
+                AssetVariant
+                    .filterByPackageFlavor(installableForApp, trackedPackageName)
+                    .let { pool ->
+                        if (installedStem == null) {
+                            pool
+                        } else {
+                            val matching =
+                                pool.filter {
+                                    AssetVariant.extractBaseStem(it.name) == installedStem
+                                }
+                            // Only honour the stem filter when it
+                            // actually keeps something; otherwise fall
+                            // back to the broader pool. A maintainer
+                            // legitimately renaming the binary should
+                            // not strand the update check.
+                            if (matching.isNotEmpty()) matching else pool
+                        }
+                    }
             val primary = fingerprintMatch
                 ?: positionMatch
                 ?: installer.choosePrimaryAsset(autoPickPool)
@@ -374,6 +403,7 @@ class InstalledAppsRepositoryImpl(
                     pickedIndex = app.pickedAssetIndex,
                     pickedSiblingCount = app.pickedAssetSiblingCount,
                     trackedPackageName = app.packageName,
+                    installedAssetName = app.installedAssetName,
                 )
 
             if (resolved == null) {

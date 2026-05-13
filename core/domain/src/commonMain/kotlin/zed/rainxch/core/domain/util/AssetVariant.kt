@@ -257,6 +257,78 @@ object AssetVariant {
      * the glob would just equal the filename and provides no rescue
      * value beyond exact-match.
      */
+    /**
+     * Extracts the **base-name stem** of an asset — the lowercased,
+     * separator-stripped concatenation of every token that isn't a
+     * version-like number, an arch token, or a flavor token. Used to
+     * detect "sibling app in the same repo" cases where two releases
+     * ship `AppA-1.10.apk` and `AppB-2.20.apk` and the auto-picker
+     * would otherwise swap one for the other based on numeric version
+     * alone (issue #591).
+     *
+     * `AppA-1.10.apk` → `"appa"`
+     * `AppB-2.20.apk` → `"appb"`
+     * `app-arm64-v8a-1.10.apk` and `app-x86_64-1.10.apk` → both `"app"`
+     * `app-1.0.apk` and `app-fdroid-1.0.apk` → both `"app"`
+     *
+     * Returns an empty string when stripping leaves nothing behind
+     * (release ships only a versioned filename like `2.0.apk`). Callers
+     * treat empty as "no stem signal — don't filter".
+     */
+    fun extractBaseStem(assetName: String): String {
+        val tokens = tokenize(assetName)
+        if (tokens.isEmpty()) return ""
+
+        // Mirror `extractTokens`' n-gram consumption pass so the
+        // fragments of compound vocab entries (e.g. `arm64-v8a` →
+        // tokens `["arm64","v8a"]`) are both stripped, not just the
+        // canonical-form half. Without this, `v8a` / `v7a` would
+        // survive the filter and `app-arm64-v8a-1.10.apk` would yield
+        // a different stem than `app-x86_64-1.10.apk`, defeating the
+        // sibling-app detection for arch-variant releases.
+        val consumed = BooleanArray(tokens.size)
+
+        for (i in 0 until tokens.size - 2) {
+            if (consumed[i] || consumed[i + 1] || consumed[i + 2]) continue
+            val candidate = "${tokens[i]}-${tokens[i + 1]}-${tokens[i + 2]}"
+            if (candidate in VOCABULARY) {
+                consumed[i] = true; consumed[i + 1] = true; consumed[i + 2] = true
+            }
+        }
+        for (i in 0 until tokens.size - 1) {
+            if (consumed[i] || consumed[i + 1]) continue
+            val dashed = "${tokens[i]}-${tokens[i + 1]}"
+            val underscored = "${tokens[i]}_${tokens[i + 1]}"
+            if (dashed in VOCABULARY || underscored in VOCABULARY) {
+                consumed[i] = true; consumed[i + 1] = true
+            }
+        }
+
+        val out = StringBuilder()
+        for (i in tokens.indices) {
+            if (consumed[i]) continue
+            val t = tokens[i]
+            if (t in VOCABULARY) continue
+            if (isVersionLikeToken(t)) continue
+            out.append(t)
+        }
+        return out.toString()
+    }
+
+    /**
+     * `1`, `10`, `1.0.0`, `v2.0.1`, `2024.04.10`, `1.0-rc1`, `beta3` —
+     * common patterns used in release filenames to encode the version.
+     * Conservative on purpose: false positives here just lose a stem
+     * character; false negatives would let a numeric variant leak into
+     * the stem and break the sibling-app detection.
+     */
+    private fun isVersionLikeToken(token: String): Boolean {
+        if (token.isEmpty()) return false
+        if (token.all { it.isDigit() }) return true
+        if (token.startsWith("v") && token.drop(1).all { it.isDigit() }) return true
+        return false
+    }
+
     fun deriveGlob(assetName: String): String? {
         val lower = assetName.lowercase()
         // Match either:
