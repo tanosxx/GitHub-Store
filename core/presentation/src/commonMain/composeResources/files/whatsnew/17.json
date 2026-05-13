@@ -23,7 +23,8 @@
         "Better version detection — releases that share a numeric version but ship distinct build artifacts are no longer falsely flagged as 'already installed'.",
         "Updating multiple apps in a row now works reliably — installs serialize so each one shows the correct APK in the system dialog. Apps screen versions also stay in sync after every install.",
         "Auto-update picks the right APK when a release ships both a regular and an F-Droid variant — no more accidentally installing a sibling app with a different package id.",
-        "Search no longer shows a result count over an empty list — when 'Hide seen' filters out every hit, the screen now explains why and offers a one-tap reset."
+        "Search no longer shows a result count over an empty list — when 'Hide seen' filters out every hit, the screen now explains why and offers a one-tap reset.",
+        "Sibling-app detection — auto-update no longer mistakes a different app shipped from the same repo (e.g. APP A → APP B) for a higher version of the tracked one."
       ]
     },
     {
