@@ -352,7 +352,7 @@ class AuthenticationViewModel(
                     try {
                         clipboardHelper.copy(
                             label = getString(Res.string.enter_code_on_github),
-                            text = start.userCode,
+                            text = start.userCode.filter { it.isLetterOrDigit() },
                         )
                         _state.update { it.copy(copied = true) }
                     } catch (e: Exception) {
@@ -614,7 +614,8 @@ class AuthenticationViewModel(
     private fun openGitHub(start: GithubDeviceStartUi) {
         viewModelScope.launch(Dispatchers.Main.immediate) {
             try {
-                val url = start.verificationUriComplete ?: start.verificationUri
+                val url = start.verificationUriComplete
+                    ?: buildPrefilledUrl(start.verificationUri, start.userCode)
                 browserHelper.openUrl(url)
             } catch (e: Exception) {
                 logger.debug("Failed to open browser: ${e.message}")
@@ -622,12 +623,17 @@ class AuthenticationViewModel(
         }
     }
 
+    private fun buildPrefilledUrl(verificationUri: String, userCode: String): String {
+        val separator = if ('?' in verificationUri) "&" else "?"
+        return verificationUri + separator + "user_code=" + userCode
+    }
+
     private fun copyCode(start: GithubDeviceStartUi) {
         viewModelScope.launch(Dispatchers.Main.immediate) {
             try {
                 clipboardHelper.copy(
                     label = "GitHub Code",
-                    text = start.userCode,
+                    text = start.userCode.filter { it.isLetterOrDigit() },
                 )
 
                 _state.update {
