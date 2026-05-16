@@ -749,7 +749,11 @@
     <!-- Personal Access Token sign-in -->
     <string name="pat_use_token_instead">هل تواجه مشكلة؟ استخدم Personal Access Token</string>
     <string name="auth_use_device_code_instead">استخدم رمز الجهاز بدلاً من ذلك</string>
-    <string name="link_show_play_store_apps">إظهار تطبيقات Play Store</string>
+    <string name="installer_category_side_store">F-Droid / Obtainium</string>
+    <string name="installer_category_sideloaded">تثبيت يدوي</string>
+    <string name="installer_category_vendor_store">متجر المُصنّع</string>
+    <string name="installer_category_play_store">متجر Play</string>
+    <string name="installer_category_system_update">تحديث النظام</string>
     <string name="pat_sheet_title">تسجيل الدخول باستخدام Personal Access Token</string>
     <string name="pat_sheet_description">أنشئ Personal Access Token (classic أو fine-grained) على أي جهاز يمكنه الوصول إلى GitHub، ثم الصقه أدناه. يتطلب صلاحية قراءة للمستودعات وملفك الشخصي.</string>
     <string name="pat_open_settings">فتح إعدادات رموز GitHub</string>

@@ -27,7 +27,7 @@
     {
       "type": "IMPROVED",
       "bullets": [
-        "Lors du lien manuel — les apps non-Play et sideloadées remontent en haut. Bascule pour inclure Play Store."
+        "Lors du lien manuel — tri par source d'installation (F-Droid / Obtainium d'abord, Play Store et mises à jour système en dernier) avec une puce indiquant la source de chaque app."
       ]
     }
   ]

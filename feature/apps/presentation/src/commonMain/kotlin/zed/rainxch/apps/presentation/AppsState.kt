@@ -90,7 +90,6 @@ data class AppsState(
     val isExternalImportInFlight: Boolean = false,
     // Keep Android Open campaign banner
     val showKaoBanner: Boolean = false,
-    val showPlayStoreAppsInLink: Boolean = false,
 ) {
     val filteredDeviceApps: ImmutableList<DeviceAppUi>
         get() {
@@ -103,15 +102,9 @@ data class AppsState(
                             it.packageName.contains(deviceAppSearchQuery, ignoreCase = true)
                     }
                 }
-            val visible =
-                if (showPlayStoreAppsInLink) {
-                    searched
-                } else {
-                    searched.filterNot { it.isFromPlayStore }
-                }
-            return visible
+            return searched
                 .sortedWith(
-                    compareBy<DeviceAppUi> { it.isFromPlayStore }
+                    compareBy<DeviceAppUi> { it.installerCategory.sortPriority }
                         .thenBy { it.appName.lowercase() },
                 ).toImmutableList()
         }

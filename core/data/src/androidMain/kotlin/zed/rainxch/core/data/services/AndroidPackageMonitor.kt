@@ -122,6 +122,8 @@ class AndroidPackageMonitor(
                         }
 
                     val installer = resolveInstallerPackageName(pkg.packageName)
+                    val isUpdatedSystem =
+                        (pkg.applicationInfo?.flags ?: 0) and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP != 0
                     DeviceApp(
                         packageName = pkg.packageName,
                         appName = pkg.applicationInfo?.loadLabel(packageManager)?.toString() ?: pkg.packageName,
@@ -129,6 +131,7 @@ class AndroidPackageMonitor(
                         versionCode = versionCode,
                         signingFingerprint = null,
                         installerPackageName = installer,
+                        isUpdatedSystemApp = isUpdatedSystem,
                     )
                 }.sortedBy { it.appName.lowercase() }
         }

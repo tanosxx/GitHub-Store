@@ -747,7 +747,11 @@
     <!-- Personal Access Token sign-in -->
     <string name="pat_use_token_instead">समस्या है? Personal Access Token का उपयोग करें</string>
     <string name="auth_use_device_code_instead">डिवाइस कोड का उपयोग करें</string>
-    <string name="link_show_play_store_apps">Play Store ऐप्स दिखाएं</string>
+    <string name="installer_category_side_store">F-Droid / Obtainium</string>
+    <string name="installer_category_sideloaded">साइडलोडेड</string>
+    <string name="installer_category_vendor_store">वेंडर स्टोर</string>
+    <string name="installer_category_play_store">Play Store</string>
+    <string name="installer_category_system_update">सिस्टम अपडेट</string>
     <string name="pat_sheet_title">Personal Access Token से साइन इन करें</string>
     <string name="pat_sheet_description">GitHub तक पहुँच रखने वाले किसी भी डिवाइस पर Personal Access Token (classic या fine-grained) बनाएं और नीचे पेस्ट करें। रिपॉजिटरी और आपकी प्रोफ़ाइल के लिए पठन अनुमति आवश्यक है।</string>
     <string name="pat_open_settings">GitHub टोकन सेटिंग्स खोलें</string>

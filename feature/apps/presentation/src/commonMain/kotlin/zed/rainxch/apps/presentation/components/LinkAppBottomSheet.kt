@@ -8,7 +8,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.material3.Checkbox
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +34,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -55,6 +55,7 @@ import zed.rainxch.apps.presentation.AppsState
 import zed.rainxch.apps.presentation.LinkStep
 import zed.rainxch.apps.presentation.model.DeviceAppUi
 import zed.rainxch.apps.presentation.model.GithubAssetUi
+import zed.rainxch.core.domain.model.InstallerCategory
 import zed.rainxch.githubstore.core.presentation.res.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,12 +87,8 @@ fun LinkAppBottomSheet(
                 LinkStep.PickApp -> PickAppStep(
                     deviceApps = state.filteredDeviceApps,
                     searchQuery = state.deviceAppSearchQuery,
-                    showPlayStoreApps = state.showPlayStoreAppsInLink,
                     onSearchChange = { onAction(AppsAction.OnDeviceAppSearchChange(it)) },
                     onAppSelected = { onAction(AppsAction.OnDeviceAppSelected(it)) },
-                    onToggleShowPlayStoreApps = {
-                        onAction(AppsAction.OnToggleShowPlayStoreApps(it))
-                    },
                 )
 
                 LinkStep.EnterUrl -> EnterUrlStep(
@@ -129,10 +126,8 @@ fun LinkAppBottomSheet(
 private fun PickAppStep(
     deviceApps: List<DeviceAppUi>,
     searchQuery: String,
-    showPlayStoreApps: Boolean,
     onSearchChange: (String) -> Unit,
     onAppSelected: (DeviceAppUi) -> Unit,
-    onToggleShowPlayStoreApps: (Boolean) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -176,26 +171,6 @@ private fun PickAppStep(
                 unfocusedIndicatorColor = Color.Transparent,
             ),
         )
-
-        Spacer(Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onToggleShowPlayStoreApps(!showPlayStoreApps) }
-                .padding(vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Checkbox(
-                checked = showPlayStoreApps,
-                onCheckedChange = onToggleShowPlayStoreApps,
-            )
-            Text(
-                text = stringResource(Res.string.link_show_play_store_apps),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
 
         Spacer(Modifier.height(8.dp))
 
@@ -261,13 +236,17 @@ private fun DeviceAppItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                text = app.packageName,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                InstallerCategoryChip(app.installerCategory)
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = app.packageName,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
 
         Spacer(Modifier.width(8.dp))
@@ -279,6 +258,42 @@ private fun DeviceAppItem(
                 color = MaterialTheme.colorScheme.outline,
             )
         }
+    }
+}
+
+@Composable
+private fun InstallerCategoryChip(category: InstallerCategory) {
+    val label = when (category) {
+        InstallerCategory.SIDE_STORE -> stringResource(Res.string.installer_category_side_store)
+        InstallerCategory.SIDELOADED -> stringResource(Res.string.installer_category_sideloaded)
+        InstallerCategory.VENDOR_STORE -> stringResource(Res.string.installer_category_vendor_store)
+        InstallerCategory.PLAY_STORE -> stringResource(Res.string.installer_category_play_store)
+        InstallerCategory.SYSTEM_UPDATE -> stringResource(Res.string.installer_category_system_update)
+    }
+    val container = when (category) {
+        InstallerCategory.SIDE_STORE -> MaterialTheme.colorScheme.primaryContainer
+        InstallerCategory.SIDELOADED -> MaterialTheme.colorScheme.secondaryContainer
+        InstallerCategory.VENDOR_STORE -> MaterialTheme.colorScheme.tertiaryContainer
+        InstallerCategory.PLAY_STORE -> MaterialTheme.colorScheme.surfaceVariant
+        InstallerCategory.SYSTEM_UPDATE -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    val content = when (category) {
+        InstallerCategory.SIDE_STORE -> MaterialTheme.colorScheme.onPrimaryContainer
+        InstallerCategory.SIDELOADED -> MaterialTheme.colorScheme.onSecondaryContainer
+        InstallerCategory.VENDOR_STORE -> MaterialTheme.colorScheme.onTertiaryContainer
+        InstallerCategory.PLAY_STORE -> MaterialTheme.colorScheme.onSurfaceVariant
+        InstallerCategory.SYSTEM_UPDATE -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Surface(
+        color = container,
+        shape = RoundedCornerShape(6.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = content,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+        )
     }
 }
 

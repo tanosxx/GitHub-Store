@@ -341,17 +341,6 @@ class TweaksRepositoryImpl(
         }
     }
 
-    override fun getShowPlayStoreAppsInLink(): Flow<Boolean> =
-        preferences.data.map { prefs ->
-            prefs[SHOW_PLAY_STORE_APPS_IN_LINK_KEY] ?: false
-        }
-
-    override suspend fun setShowPlayStoreAppsInLink(enabled: Boolean) {
-        preferences.edit { prefs ->
-            prefs[SHOW_PLAY_STORE_APPS_IN_LINK_KEY] = enabled
-        }
-    }
-
     override fun getApkInspectCoachmarkShown(): Flow<Boolean> =
         preferences.data.map { prefs ->
             prefs[APK_INSPECT_COACHMARK_SHOWN_KEY] ?: false
@@ -489,7 +478,6 @@ class TweaksRepositoryImpl(
         private val EXTERNAL_MATCH_SEARCH_ENABLED_KEY = booleanPreferencesKey("external_match_search_enabled")
         private val EXTERNAL_IMPORT_BANNER_DISMISSED_AT_KEY = intPreferencesKey("external_import_banner_dismissed_at")
         private val KAO_BANNER_DISMISSED_KEY = booleanPreferencesKey("kao_banner_dismissed")
-        private val SHOW_PLAY_STORE_APPS_IN_LINK_KEY = booleanPreferencesKey("show_play_store_apps_in_link")
         private val APK_INSPECT_COACHMARK_SHOWN_KEY = booleanPreferencesKey("apk_inspect_coachmark_shown")
         private val CHANNEL_CHIP_COACHMARK_SHOWN_KEY = booleanPreferencesKey("channel_chip_coachmark_shown")
         private val SHOW_ALL_PLATFORMS_KEY = booleanPreferencesKey("show_all_platforms")

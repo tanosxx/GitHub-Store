@@ -27,7 +27,7 @@
     {
       "type": "IMPROVED",
       "bullets": [
-        "Uygulamayı manuel bağlarken — Play dışı ve sideloaded uygulamalar üstte. Play Store için aç/kapat."
+        "Uygulamayı manuel bağlarken — yükleyici kaynağına göre sıralı (önce F-Droid / Obtainium, en sonda Play Store ve sistem güncellemeleri); her uygulamanın kaynağını gösteren çip eklendi."
       ]
     }
   ]

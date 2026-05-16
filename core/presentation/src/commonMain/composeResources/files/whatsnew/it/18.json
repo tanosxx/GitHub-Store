@@ -27,7 +27,7 @@
     {
       "type": "IMPROVED",
       "bullets": [
-        "Collegamento manuale di app — quelle non-Play e sideloadate ora compaiono in cima. Toggle per includere Play Store."
+        "Collegamento manuale di app — ordinate per origine di installazione (F-Droid / Obtainium per primi, Play Store e aggiornamenti di sistema per ultimi) con un chip che mostra l'origine di ogni app."
       ]
     }
   ]

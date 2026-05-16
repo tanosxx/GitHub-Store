@@ -113,10 +113,6 @@ interface TweaksRepository {
 
     suspend fun setKaoBannerDismissed(dismissed: Boolean)
 
-    fun getShowPlayStoreAppsInLink(): Flow<Boolean>
-
-    suspend fun setShowPlayStoreAppsInLink(enabled: Boolean)
-
     /**
      * One-shot flag for the APK Inspect coachmark next to the install
      * button on the details screen. `false` until the user has seen the

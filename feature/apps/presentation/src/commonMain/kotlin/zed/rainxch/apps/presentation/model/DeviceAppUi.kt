@@ -1,5 +1,7 @@
 package zed.rainxch.apps.presentation.model
 
+import zed.rainxch.core.domain.model.InstallerCategory
+
 data class DeviceAppUi(
     val packageName: String,
     val appName: String,
@@ -7,7 +9,8 @@ data class DeviceAppUi(
     val versionCode: Long,
     val signingFingerprint: String?,
     val installerPackageName: String? = null,
+    val isUpdatedSystemApp: Boolean = false,
 ) {
-    val isFromPlayStore: Boolean
-        get() = installerPackageName == "com.android.vending"
+    val installerCategory: InstallerCategory
+        get() = InstallerCategory.classify(installerPackageName, isUpdatedSystemApp)
 }

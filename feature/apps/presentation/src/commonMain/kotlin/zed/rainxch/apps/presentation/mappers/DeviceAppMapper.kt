@@ -11,6 +11,7 @@ fun DeviceApp.toUi(): DeviceAppUi {
         versionCode = versionCode,
         signingFingerprint = signingFingerprint,
         installerPackageName = installerPackageName,
+        isUpdatedSystemApp = isUpdatedSystemApp,
     )
 }
 
@@ -22,5 +23,6 @@ fun DeviceAppUi.toDomain(): DeviceApp {
         versionCode = versionCode,
         signingFingerprint = signingFingerprint,
         installerPackageName = installerPackageName,
+        isUpdatedSystemApp = isUpdatedSystemApp,
     )
 }

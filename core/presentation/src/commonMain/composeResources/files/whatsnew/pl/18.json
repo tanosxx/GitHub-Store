@@ -27,7 +27,7 @@
     {
       "type": "IMPROVED",
       "bullets": [
-        "Ręczne powiązywanie aplikacji — aplikacje spoza Play i sideloadowane na górze. Przełącznik, by pokazać Play Store."
+        "Ręczne powiązywanie aplikacji — sortowane wg źródła instalatora (F-Droid / Obtainium na początku, Play Store i aktualizacje systemu na końcu) z chipem pokazującym źródło każdej aplikacji."
       ]
     }
   ]

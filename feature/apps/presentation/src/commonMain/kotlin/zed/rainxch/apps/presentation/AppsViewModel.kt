@@ -96,7 +96,6 @@ class AppsViewModel(
                     loadApps()
                     observePendingExternalImports()
                     observeKaoBannerDismissed()
-                    observeShowPlayStoreAppsInLink()
                     hasLoadedInitialData = true
                 }
             }.stateIn(
@@ -109,14 +108,6 @@ class AppsViewModel(
         viewModelScope.launch {
             tweaksRepository.getKaoBannerDismissed().collect { dismissed ->
                 _state.update { it.copy(showKaoBanner = !dismissed) }
-            }
-        }
-    }
-
-    private fun observeShowPlayStoreAppsInLink() {
-        viewModelScope.launch {
-            tweaksRepository.getShowPlayStoreAppsInLink().collect { enabled ->
-                _state.update { it.copy(showPlayStoreAppsInLink = enabled) }
             }
         }
     }
@@ -358,21 +349,6 @@ class AppsViewModel(
 
             is AppsAction.OnDeviceAppSearchChange -> {
                 _state.update { it.copy(deviceAppSearchQuery = action.query) }
-            }
-
-            is AppsAction.OnToggleShowPlayStoreApps -> {
-                val previous = _state.value.showPlayStoreAppsInLink
-                _state.update { it.copy(showPlayStoreAppsInLink = action.enabled) }
-                viewModelScope.launch {
-                    try {
-                        tweaksRepository.setShowPlayStoreAppsInLink(action.enabled)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (t: Throwable) {
-                        logger.warn("Failed to persist showPlayStoreAppsInLink: ${t.message}")
-                        _state.update { it.copy(showPlayStoreAppsInLink = previous) }
-                    }
-                }
             }
 
             is AppsAction.OnDeviceAppSelected -> {
