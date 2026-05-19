@@ -2718,6 +2718,11 @@ class DetailsViewModel(
                 telemetryRepository.recordRepoViewed(repo.id)
 
                 observeInstalledApp(repo.id)
+
+                maybeAutoTranslate(
+                    readmeBody = readme?.first,
+                    releaseDescription = selectedRelease?.description,
+                )
             } catch (e: RateLimitException) {
                 logger.error("Rate limited: ${e.message}")
                 val seconds = e.rateLimitInfo.timeUntilReset().inWholeSeconds
@@ -2880,6 +2885,59 @@ class DetailsViewModel(
                 _state.update { it.copy(isRefreshing = false) }
                 _events.send(
                     DetailsEvent.OnRefreshError(kind = RefreshError.GENERIC),
+                )
+            }
+        }
+    }
+
+    private fun maybeAutoTranslate(readmeBody: String?, releaseDescription: String?) {
+        viewModelScope.launch {
+            val enabled = runCatching {
+                tweaksRepository.getAutoTranslateEnabled().first()
+            }.getOrDefault(false)
+            if (!enabled) return@launch
+            // Treat blank explicit target as "unset" so fallback chain can
+            // run — `explicit = ""` would otherwise short-circuit the
+            // `?:` operator and disable auto-translate.
+            val explicit = runCatching {
+                tweaksRepository.getAutoTranslateTargetLang().first()
+            }.getOrNull()?.takeIf { it.isNotBlank() }
+            val app = runCatching {
+                tweaksRepository.getAppLanguage().first()
+            }.getOrNull()?.takeIf { it.isNotBlank() }
+            val target = explicit ?: app ?: translationRepository.getDeviceLanguageCode()
+            if (target.isBlank()) return@launch
+
+            val currentReadmeLang = _state.value.readmeLanguage
+            if (!readmeBody.isNullOrBlank() &&
+                _state.value.aboutTranslation.translatedText == null &&
+                currentReadmeLang?.equals(target, ignoreCase = true) != true
+            ) {
+                aboutTranslationJob?.cancel()
+                aboutTranslationJob = translateContent(
+                    text = readmeBody,
+                    targetLanguageCode = target,
+                    updateState = { ts -> _state.update { it.copy(aboutTranslation = ts) } },
+                    getCurrentState = { _state.value.aboutTranslation },
+                )
+            }
+            // Source-language guard mirrors the README branch — if the
+            // release-notes source language already matches the target,
+            // skip the translation round-trip. The release model carries
+            // no language hint, so we fall back to `readmeLanguage` as the
+            // best available signal for repositories that consistently
+            // author release notes in the repo's primary language.
+            val releaseSourceLang = currentReadmeLang
+            if (!releaseDescription.isNullOrBlank() &&
+                _state.value.whatsNewTranslation.translatedText == null &&
+                releaseSourceLang?.equals(target, ignoreCase = true) != true
+            ) {
+                whatsNewTranslationJob?.cancel()
+                whatsNewTranslationJob = translateContent(
+                    text = releaseDescription,
+                    targetLanguageCode = target,
+                    updateState = { ts -> _state.update { it.copy(whatsNewTranslation = ts) } },
+                    getCurrentState = { _state.value.whatsNewTranslation },
                 )
             }
         }

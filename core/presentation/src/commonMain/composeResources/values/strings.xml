@@ -1213,6 +1213,14 @@
     <string name="kao_banner_cta">Learn more</string>
     <string name="kao_banner_dismiss_cd">Dismiss banner</string>
 
+    <!-- Auto-translate -->
+    <string name="translation_auto_title">Auto-translate repositories</string>
+    <string name="translation_auto_subtitle">Translate README and release notes automatically when opening a repository. Uses your app language as the target.</string>
+    <string name="translation_auto_target">Target: %1$s</string>
+    <string name="translation_auto_target_reset">Reset</string>
+    <string name="translation_auto_target_label">Translate into</string>
+    <string name="translation_auto_target_followup">Following app language (%1$s)</string>
+
     <!-- Host tokens -->
     <string name="host_tokens_title">Authentication tokens</string>
     <string name="host_tokens_entry_subtitle">Personal access tokens per forge host (GitHub, Codeberg, Forgejo)</string>
